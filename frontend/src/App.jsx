@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import Header from './components/Header';
-import Hero from './components/Hero';
-import HuntForm from './components/HuntForm';
-import LoadingState from './components/LoadingState';
-import ResultsDisplay from './components/ResultsDisplay';
-import SavedProspectsList from './components/SavedProspectsList';
+import React, { useState, useEffect } from "react";
+import Header from "./components/Header";
+import Hero from "./components/Hero";
+import HuntForm from "./components/HuntForm";
+import LoadingState from "./components/LoadingState";
+import ResultsDisplay from "./components/ResultsDisplay";
+import SavedProspectsList from "./components/SavedProspectsList";
 
 /**
  * Main application component for Signal Hunt.
@@ -14,35 +14,35 @@ import SavedProspectsList from './components/SavedProspectsList';
 function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState(null);
-  const [error, setError] = useState('');
-  
+  const [error, setError] = useState("");
+
   // Read saved prospects from LocalStorage on mount
   const [savedProspects, setSavedProspects] = useState(() => {
     try {
-      const stored = localStorage.getItem('savedProspects');
+      const stored = localStorage.getItem("savedProspects");
       return stored ? JSON.parse(stored) : [];
     } catch (err) {
-      console.error('Error reading saved prospects from LocalStorage:', err);
+      console.error("Error reading saved prospects from LocalStorage:", err);
       return [];
     }
   });
 
   // Sync saved prospects list to LocalStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem('savedProspects', JSON.stringify(savedProspects));
+    localStorage.setItem("savedProspects", JSON.stringify(savedProspects));
   }, [savedProspects]);
 
   // Executes URL qualification sequence using relative Vercel-compatible paths
   const handleHunt = async (targetUrl) => {
     setIsLoading(true);
-    setError('');
+    setError("");
     setResult(null);
 
     try {
-      const response = await fetch('/api/hunt', {
-        method: 'POST',
+      const response = await fetch("/api/hunt", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ url: targetUrl }),
       });
@@ -52,11 +52,16 @@ function App() {
       if (response.ok && data.success) {
         setResult(data);
       } else {
-        setError(data.error || 'Scraping or AI analysis failed. Please verify API key.');
+        setError(
+          data.error ||
+            "Scraping or AI analysis failed. Please verify API key.",
+        );
       }
     } catch (err) {
-      console.error('Fetch error during hunt:', err);
-      setError('Could not connect to the API server. Make sure the Node backend is running.');
+      console.error("Fetch error during hunt:", err);
+      setError(
+        "Could not connect to the API server. Make sure the Node backend is running.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -64,7 +69,7 @@ function App() {
 
   const handleReset = () => {
     setResult(null);
-    setError('');
+    setError("");
   };
 
   // Adds active result to LocalStorage dashboard
@@ -74,7 +79,7 @@ function App() {
 
     const updatedProspect = {
       ...prospect,
-      savedAt: new Date().toISOString()
+      savedAt: new Date().toISOString(),
     };
     setSavedProspects((prev) => [updatedProspect, ...prev]);
   };
@@ -86,18 +91,24 @@ function App() {
 
   // Clears list with confirmation
   const handleClearAll = () => {
-    if (window.confirm('Are you sure you want to clear your saved prospects list? This cannot be undone.')) {
+    if (
+      window.confirm(
+        "Are you sure you want to clear your saved prospects list? This cannot be undone.",
+      )
+    ) {
       setSavedProspects([]);
     }
   };
 
   // Checks if active result is already saved
-  const isResultSaved = result ? savedProspects.some((p) => p.url === result.url) : false;
+  const isResultSaved = result
+    ? savedProspects.some((p) => p.url === result.url)
+    : false;
 
   return (
     <div className="app-container">
       <Header />
-      
+
       <main className="container">
         {/* Only show Hero when not displaying results */}
         {!result && <Hero />}
@@ -109,8 +120,14 @@ function App() {
 
         {/* Display backend connection or scraping failure error */}
         {error && !isLoading && (
-          <div className="error-message" style={{ justifyContent: 'center', marginBottom: '2rem' }}>
-            <span role="img" aria-label="Error">❌</span> {error}
+          <div
+            className="error-message"
+            style={{ justifyContent: "center", marginBottom: "2rem" }}
+          >
+            <span role="img" aria-label="Error">
+              ❌
+            </span>{" "}
+            {error}
           </div>
         )}
 
@@ -119,9 +136,9 @@ function App() {
 
         {/* Completed prospect audit display */}
         {result && !isLoading && (
-          <ResultsDisplay 
-            data={result} 
-            onReset={handleReset} 
+          <ResultsDisplay
+            data={result}
+            onReset={handleReset}
             onSaveProspect={handleSaveProspect}
             isSaved={isResultSaved}
           />
@@ -129,8 +146,8 @@ function App() {
 
         {/* Persistent LocalStorage dashboard table (visible when not loading) */}
         {!isLoading && (
-          <SavedProspectsList 
-            prospects={savedProspects} 
+          <SavedProspectsList
+            prospects={savedProspects}
             onDelete={handleDeleteProspect}
             onClearAll={handleClearAll}
           />
@@ -138,7 +155,10 @@ function App() {
       </main>
 
       <footer className="footer">
-        <p>&copy; {new Date().getFullYear()} Signal Hunt. Built for designers' cold outreach.</p>
+        <p>
+          &copy; {new Date().getFullYear()} Signal Hunt. Built for by The
+          Kreator for designers' cold outreach.
+        </p>
       </footer>
     </div>
   );
