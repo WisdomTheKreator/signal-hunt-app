@@ -156,8 +156,8 @@ function App() {
 
       <footer className="footer">
         <p>
-          &copy; {new Date().getFullYear()} Signal Hunt. Built for by The
-          Kreator for designers' cold outreach.
+          &copy; {new Date().getFullYear()} Signal Hunt. Built by The
+          Kreator for Designers' Cold Outreach.
         </p>
       </footer>
     </div>
