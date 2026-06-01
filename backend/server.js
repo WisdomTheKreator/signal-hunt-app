@@ -5,6 +5,12 @@ const cheerio = require('cheerio');
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
+const GEMINI_MODEL_PRIMARY =
+  process.env.GEMINI_MODEL_PRIMARY || 'gemini-2.5-flash';
+const GEMINI_MODEL_FALLBACK =
+  process.env.GEMINI_MODEL_FALLBACK || 'gemini-3.1-flash-lite';
+const FEEDBACK_EMAIL = process.env.FEEDBACK_EMAIL || '';
+
 // Create Express App
 const app = express();
 app.use(cors());
@@ -123,6 +129,45 @@ async function scrapeUrlContent(targetUrl) {
   }
 }
 
+function getGeminiEndpoint(model, apiKey) {
+  return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+}
+
+function normalizeGeminiErrorMessage(error) {
+  const message = error?.response?.data?.error?.message || error?.message || '';
+  return message.toString().toLowerCase();
+}
+
+function isGeminiQuotaError(error) {
+  const status = error?.response?.status;
+  if (status === 429) {
+    return true;
+  }
+
+  const message = normalizeGeminiErrorMessage(error);
+  return /quota|rate limit|limit exceeded|resource_exhausted|too many requests|429|exhausted/.test(message);
+}
+
+async function callGemini(model, prompt, apiKey) {
+  const apiEndpoint = getGeminiEndpoint(model, apiKey);
+  const response = await axios.post(apiEndpoint, {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: {
+      responseMimeType: 'application/json',
+      temperature: 0.7
+    }
+  }, {
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  const candidateText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!candidateText) {
+    throw new Error('Invalid or empty response from Gemini API.');
+  }
+
+  return JSON.parse(candidateText.trim());
+}
+
 /**
  * Calls Gemini API using standard REST call with prompt instructions.
  */
@@ -185,26 +230,23 @@ Outreach Readiness Score:
 - 81-100: Massive growth signals or major brand re-alignment in progress.`;
 
   try {
-    const apiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-    
-    const response = await axios.post(apiEndpoint, {
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        responseMimeType: 'application/json',
-        temperature: 0.7
-      }
-    }, {
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-    const candidateText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!candidateText) {
-      throw new Error('Invalid or empty response from Gemini API.');
-    }
-
-    const result = JSON.parse(candidateText.trim());
-    return result;
+    const result = await callGemini(GEMINI_MODEL_PRIMARY, prompt, apiKey);
+    return { ...result, model_used: GEMINI_MODEL_PRIMARY };
   } catch (error) {
+    if (isGeminiQuotaError(error) && GEMINI_MODEL_FALLBACK !== GEMINI_MODEL_PRIMARY) {
+      console.warn('Gemini primary model quota hit. Falling back to', GEMINI_MODEL_FALLBACK);
+      try {
+        const fallbackResult = await callGemini(GEMINI_MODEL_FALLBACK, prompt, apiKey);
+        return {
+          ...fallbackResult,
+          model_used: GEMINI_MODEL_FALLBACK,
+          fallback_from: GEMINI_MODEL_PRIMARY,
+        };
+      } catch (fallbackError) {
+        console.error('Fallback Gemini model also failed:', fallbackError.message);
+        throw new Error('AI analysis failed on fallback model. Please check your Gemini configuration.');
+      }
+    }
     console.error('Error during Gemini analysis:', error.message);
     throw new Error('AI Analysis failed. Please check your Gemini API key or try again.');
   }
@@ -239,6 +281,8 @@ app.post('/api/hunt', async (req, res) => {
       success: true,
       hunt_id: Date.now(), // Generate a unique identifier on the fly
       url: normalized,
+      model_used: analysis.model_used || 'gemini-2.5-flash',
+      fallback_from: analysis.fallback_from || null,
       brand_health: {
         score: analysis.brand_health_score || 50,
         insight: analysis.brand_health_insight || 'Brand analysis complete.'
@@ -253,6 +297,115 @@ app.post('/api/hunt', async (req, res) => {
   } catch (error) {
     console.error('Error during hunt process:', error.message);
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+async function sendNotificationEmail(toEmail, subject, htmlContent) {
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpPort = parseInt(process.env.SMTP_PORT || '587');
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+  const resendApiKey = process.env.RESEND_API_KEY;
+  const fromEmail = process.env.SENDER_EMAIL || smtpUser || 'no-reply@signalhunt.app';
+
+  const hasResend = resendApiKey && resendApiKey !== 'your_resend_api_key_here';
+  const hasSmtp = smtpUser && smtpUser !== 'your_email@gmail.com' && smtpPass && smtpPass !== 'your_app_password_here' && smtpHost;
+
+  if (!hasResend && !hasSmtp) {
+    console.log(`[EMAIL SIMULATED] Notification to ${toEmail}:`, { subject, htmlContent });
+    return { simulated: true, message: 'Email credentials not configured. Email simulated locally.' };
+  }
+
+  const sendWithResend = async () => {
+    await axios.post('https://api.resend.com/emails', {
+      from: `"Signal Hunt" <${fromEmail}>`,
+      to: toEmail,
+      subject,
+      html: htmlContent
+    }, {
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+  };
+
+  const sendWithSmtp = async () => {
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpPort === 465,
+      auth: { user: smtpUser, pass: smtpPass }
+    });
+
+    await transporter.sendMail({
+      from: `"Signal Hunt" <${fromEmail}>`,
+      to: toEmail,
+      subject,
+      html: htmlContent
+    });
+  };
+
+  if (hasResend) {
+    try {
+      await sendWithResend();
+      return { simulated: false, provider: 'resend' };
+    } catch (resendError) {
+      console.warn('[Resend] failed, falling back to SMTP:', resendError.message);
+    }
+  }
+
+  if (hasSmtp) {
+    await sendWithSmtp();
+    return { simulated: false, provider: 'smtp' };
+  }
+
+  console.log(`[EMAIL SIMULATED] Notification to ${toEmail}:`, { subject, htmlContent });
+  return { simulated: true, message: 'Email credentials not configured. Email simulated locally.' };
+}
+
+// ROUTE: Feedback submission route (sends or simulates feedback email)
+app.post('/api/feedback', async (req, res) => {
+  const { email, message } = req.body;
+
+  if (!message || !message.trim()) {
+    return res.status(400).json({ success: false, error: 'Feedback message is required.' });
+  }
+
+  const feedbackReceiver = FEEDBACK_EMAIL;
+  const fromUserEmail = email && email.trim() ? email.trim() : 'Anonymous';
+  const subject = `Signal Hunt Feedback from ${fromUserEmail}`;
+  const htmlContent = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+      <h2 style="color: #6366f1;">📬 New Feedback Submission</h2>
+      <p><strong>From:</strong> ${fromUserEmail}</p>
+      <p><strong>Message:</strong></p>
+      <p style="white-space: pre-wrap;">${message}</p>
+    </div>
+  `;
+
+  if (!feedbackReceiver) {
+    console.log('[FEEDBACK SIMULATED] Feedback received:', {
+      from: fromUserEmail,
+      message,
+    });
+    return res.json({
+      success: true,
+      simulated: true,
+      message: 'Feedback submitted successfully. Configure FEEDBACK_EMAIL to receive it by email.',
+    });
+  }
+
+  try {
+    await sendNotificationEmail(feedbackReceiver, subject, htmlContent);
+    console.log(`[FEEDBACK] Sent to ${feedbackReceiver} from ${fromUserEmail}`);
+    return res.json({ success: true, message: 'Feedback submitted successfully.' });
+  } catch (error) {
+    console.error('Feedback delivery error:', error.message);
+    return res.status(500).json({
+      success: false,
+      error: 'Could not submit feedback. Please verify email configuration.',
+    });
   }
 });
 
@@ -273,12 +426,6 @@ app.post('/api/save-prospect', async (req, res) => {
     return res.status(400).json({ success: false, error: 'Invalid email format' });
   }
 
-  const smtpHost = process.env.SMTP_HOST;
-  const smtpPort = parseInt(process.env.SMTP_PORT || '587');
-  const smtpUser = process.env.SMTP_USER;
-  const smtpPass = process.env.SMTP_PASS;
-  const resendApiKey = process.env.RESEND_API_KEY;
-  const fromEmail = process.env.SENDER_EMAIL || smtpUser || 'no-reply@signalhunt.app';
   const subject = `🎯 Prospect Audit Report: ${prospect.url.replace(/^https?:\/\/(www\.)?/, '')}`;
 
   const htmlContent = `
@@ -307,71 +454,9 @@ app.post('/api/save-prospect', async (req, res) => {
       </div>
     `;
 
-  const hasResend = resendApiKey && resendApiKey !== 'your_resend_api_key_here';
-  const hasSmtp = smtpUser && smtpUser !== 'your_email@gmail.com' && smtpPass && smtpPass !== 'your_app_password_here' && smtpHost;
-
-  if (!hasResend && !hasSmtp) {
-    console.log(`[EMAIL SIMULATED] Email report request for ${email}:`, prospect);
-    return res.json({
-      success: true,
-      simulated: true,
-      message: 'Email credentials not configured. Report simulated locally.'
-    });
-  }
-
-  const sendWithResend = async () => {
-    await axios.post('https://api.resend.com/emails', {
-      from: `"Signal Hunt" <${fromEmail}>`,
-      to: email,
-      subject,
-      html: htmlContent
-    }, {
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        'Content-Type': 'application/json'
-      }
-    });
-  };
-
-  const sendWithSmtp = async () => {
-    const transporter = nodemailer.createTransport({
-      host: smtpHost,
-      port: smtpPort,
-      secure: smtpPort === 465,
-      auth: { user: smtpUser, pass: smtpPass }
-    });
-
-    await transporter.sendMail({
-      from: `"Signal Hunt" <${fromEmail}>`,
-      to: email,
-      subject,
-      html: htmlContent
-    });
-  };
-
   try {
-    if (hasResend) {
-      try {
-        await sendWithResend();
-        console.log(`[Resend] Email report sent to ${email}`);
-        return res.json({ success: true, message: 'Audit report emailed successfully via Resend.' });
-      } catch (resendError) {
-        console.warn('[Resend] failed, falling back to SMTP:', resendError.message);
-      }
-    }
-
-    if (hasSmtp) {
-      await sendWithSmtp();
-      console.log(`[SMTP] Email report sent to ${email}`);
-      return res.json({ success: true, message: 'Audit report emailed successfully via SMTP.' });
-    }
-
-    console.log(`[EMAIL SIMULATED] Email report request for ${email}:`, prospect);
-    return res.json({
-      success: true,
-      simulated: true,
-      message: 'Email credentials not configured. Report simulated locally.'
-    });
+    await sendNotificationEmail(email, subject, htmlContent);
+    return res.json({ success: true, message: 'Audit report emailed successfully.' });
   } catch (error) {
     console.error('Email delivery error:', error.message);
     res.status(500).json({ success: false, error: 'Email delivery failed. Please verify Resend or SMTP configuration.' });

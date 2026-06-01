@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 
 const LOADING_STEPS = [
-  'Hunting signals...',
-  'Extracting page copy with Jina...',
-  'Analyzing design layout & spacing...',
-  'Evaluating brand health indicators...',
-  'Checking market growth triggers...',
-  'Drafting personalized outreach DM...'
+  "Hunting signals...",
+  "Extracting page copy...",
+  "Analyzing design layout & spacing...",
+  "Evaluating brand health indicators...",
+  "Checking market growth triggers...",
+  "Drafting personalized outreach DM...",
 ];
 
 /**

@@ -113,6 +113,27 @@ function App() {
         {/* Only show Hero when not displaying results */}
         {!result && <Hero />}
 
+        <div
+          className="beta-limit-card"
+          style={{
+            background: "var(--bg-card)",
+            color: "var(--text-primary)",
+            border: "1px solid var(--border-color)",
+            borderRadius: "14px",
+            padding: "1.2rem 1.3rem",
+            marginBottom: "1.5rem",
+            boxShadow: "var(--shadow-md)",
+          }}
+        >
+          <h2>Beta Launch Limits</h2>
+          <p>
+            This MVP is in its beta phase. You can currently make up to{" "}
+            <strong>5 hunts per minute</strong> and{" "}
+            <strong>500 hunts per day</strong>. If you hit a limit, please wait
+            a bit before trying again. Thank You!
+          </p>
+        </div>
+
         {/* Input Form visible if not loading and no active results */}
         {!isLoading && !result && (
           <HuntForm onSubmit={handleHunt} isLoading={isLoading} />
@@ -156,8 +177,8 @@ function App() {
 
       <footer className="footer">
         <p>
-          &copy; {new Date().getFullYear()} Signal Hunt. Built for by The
-          Kreator for designers' cold outreach.
+          &copy; {new Date().getFullYear()} Signal Hunt. Built by The Kreator
+          for Designers' Cold Outreach.
         </p>
       </footer>
     </div>
