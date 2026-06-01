@@ -248,7 +248,7 @@ Outreach Readiness Score:
       }
     }
     console.error('Error during Gemini analysis:', error.message);
-    throw new Error('AI Analysis failed. Please check your Gemini API key or try again.');
+    throw new Error('AI Analysis failed. Please try again in a few minutes.');
   }
 }
 
