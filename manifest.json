@@ -1,0 +1,31 @@
+{
+  "background_color": "#0b0f19",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "Signal Hunt",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "Signal Hunt",
+  "start_url": "/signal-hunt-app-live.vercel.app",
+  "theme_color": "#8091f2",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,&lt;svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"&gt;&lt;text y=\".9em\" font-size=\"90\"&gt;🎯&lt;/text&gt;&lt;/svg&gt;",
+      "type": "image/svg+xml",
+      "isSquare": false,
+      "isPng": false,
+      "isWebp": false,
+      "isJpg": false,
+      "width": 0,
+      "is512x512": false,
+      "is256x256": false,
+      "is192x192": false
+    }
+  ],
+  "lang": "en",
+  "description": "Signal Hunt is a web-based prospect qualification tool designed for freelance designers and creative service providers conducting B2B cold outreach. The product analyzes prospect URLs in real-time, providing two distinct intelligence scores and actionable insights in under 5-15 seconds, enabling users to make confident outreach decisions without extensive manual research.",
+  "categories": [
+    "graphics",
+    "graphics &amp; design"
+  ]
+}
