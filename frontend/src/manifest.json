@@ -1,0 +1,43 @@
+{
+  "background_color": "#0b0f19",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "Signal Hunt",
+  "orientation": "portrait",
+  "scope": "/",
+  "short_name": "Signal Hunt",
+  "start_url": "/signal-hunt-app-live.vercel.app",
+  "theme_color": "#8091f2",
+  "icons": [
+    {
+      "src": "c:/Users/user/Documents/DESIGN FILES/DESIGNS FOR CLIENTS/THE KREATOR/SIGNAL HUNT BRANDING/1x/1x/manifest-icon-192.maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "c:/Users/user/Documents/DESIGN FILES/DESIGNS FOR CLIENTS/THE KREATOR/SIGNAL HUNT BRANDING/1x/1x/manifest-icon-192.maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "c:/Users/user/Documents/DESIGN FILES/DESIGNS FOR CLIENTS/THE KREATOR/SIGNAL HUNT BRANDING/1x/1x/manifest-icon-512.maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "c:/Users/user/Documents/DESIGN FILES/DESIGNS FOR CLIENTS/THE KREATOR/SIGNAL HUNT BRANDING/1x/1x/manifest-icon-512.maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "id": "Signal-Hunt-App",
+  "description": "Signal Hunt is a web-based prospect qualification tool designed for freelance designers and creative service providers conducting B2B cold outreach. The product analyzes prospect URLs in real-time, providing two distinct intelligence scores and actionable insights in under 5-15 seconds, enabling users to make confident outreach decisions without extensive manual research.",
+  "lang": "en",
+  "categories": [
+    "graphics &amp; design"
+  ]
+}
