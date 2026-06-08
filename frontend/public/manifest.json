@@ -6,29 +6,29 @@
   "orientation": "portrait",
   "scope": "/",
   "short_name": "Signal Hunt",
-  "start_url": "/signal-hunt-app-live.vercel.app",
+  "start_url": "/",
   "theme_color": "#8091f2",
   "icons": [
     {
-      "src": "c:/Users/user/Documents/DESIGN FILES/DESIGNS FOR CLIENTS/THE KREATOR/SIGNAL HUNT BRANDING/1x/1x/manifest-icon-192.maskable.png",
+      "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "c:/Users/user/Documents/DESIGN FILES/DESIGNS FOR CLIENTS/THE KREATOR/SIGNAL HUNT BRANDING/1x/1x/manifest-icon-192.maskable.png",
+      "src": "/icon-192-maskable.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "c:/Users/user/Documents/DESIGN FILES/DESIGNS FOR CLIENTS/THE KREATOR/SIGNAL HUNT BRANDING/1x/1x/manifest-icon-512.maskable.png",
+      "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "c:/Users/user/Documents/DESIGN FILES/DESIGNS FOR CLIENTS/THE KREATOR/SIGNAL HUNT BRANDING/1x/1x/manifest-icon-512.maskable.png",
+      "src": "/icon-512-maskable.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -38,6 +38,34 @@
   "description": "Signal Hunt is a web-based prospect qualification tool designed for freelance designers and creative service providers conducting B2B cold outreach. The product analyzes prospect URLs in real-time, providing two distinct intelligence scores and actionable insights in under 5-15 seconds, enabling users to make confident outreach decisions without extensive manual research.",
   "lang": "en",
   "categories": [
-    "graphics &amp; design"
+    "productivity"
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-540.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "/screenshot-1280.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Start Hunt",
+      "short_name": "Hunt",
+      "description": "Start a new Signal Hunt",
+      "url": "/?mode=hunt",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
   ]
 }
