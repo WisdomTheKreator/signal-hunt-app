@@ -6,9 +6,9 @@ const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 const GEMINI_MODEL_PRIMARY =
-  (process.env.GEMINI_MODEL_PRIMARY || 'gemini-pro').trim().replace(/^models\//, '');
+  (process.env.GEMINI_MODEL_PRIMARY || '3.1-Flash-lite').trim().replace(/^models\//, '');
 const GEMINI_MODEL_FALLBACK =
-  (process.env.GEMINI_MODEL_FALLBACK || 'gemini-pro').trim().replace(/^models\//, '');
+  (process.env.GEMINI_MODEL_FALLBACK || '3.1-Flash-lite').trim().replace(/^models\//, '');
 const FEEDBACK_EMAIL = process.env.FEEDBACK_EMAIL || '';
 
 const CRITICAL_ENVS = ['GEMINI_API_KEY'];
