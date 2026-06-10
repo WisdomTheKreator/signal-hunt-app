@@ -285,8 +285,9 @@ Outreach Readiness Score:
         throw new Error('AI analysis failed on fallback model. Please check your Gemini configuration.');
       }
     }
-    console.error('Error during Gemini analysis:', error.message);
-    throw new Error('AI Analysis failed. Please try again in a few minutes.');
+    const actualError = error?.response?.data?.error?.message || error.message;
+    console.error('Error during Gemini analysis:', actualError);
+    throw new Error(`AI Analysis failed: ${actualError}`);
   }
 }
 
