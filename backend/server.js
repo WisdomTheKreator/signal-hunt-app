@@ -6,9 +6,9 @@ const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 const GEMINI_MODEL_PRIMARY =
-  process.env.GEMINI_MODEL_PRIMARY || 'gemini-2.5-flash';
+  process.env.GEMINI_MODEL_PRIMARY || 'gemini-1.5-flash';
 const GEMINI_MODEL_FALLBACK =
-  process.env.GEMINI_MODEL_FALLBACK || 'gemini-3.1-flash-lite';
+  process.env.GEMINI_MODEL_FALLBACK || 'gemini-1.5-flash-8b';
 const FEEDBACK_EMAIL = process.env.FEEDBACK_EMAIL || '';
 
 // Create Express App
@@ -160,12 +160,15 @@ async function callGemini(model, prompt, apiKey) {
     headers: { 'Content-Type': 'application/json' }
   });
 
-  const candidateText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  let candidateText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!candidateText) {
     throw new Error('Invalid or empty response from Gemini API.');
   }
 
-  return JSON.parse(candidateText.trim());
+  // Strip markdown code blocks if the AI included them despite instructions
+  const cleanedText = candidateText.replace(/```json|```/g, '').trim();
+
+  return JSON.parse(cleanedText);
 }
 
 /**
@@ -281,7 +284,7 @@ app.post('/api/hunt', async (req, res) => {
       success: true,
       hunt_id: Date.now(), // Generate a unique identifier on the fly
       url: normalized,
-      model_used: analysis.model_used || 'gemini-2.5-flash',
+      model_used: analysis.model_used || GEMINI_MODEL_PRIMARY,
       fallback_from: analysis.fallback_from || null,
       brand_health: {
         score: analysis.brand_health_score || 50,
@@ -461,6 +464,15 @@ app.post('/api/save-prospect', async (req, res) => {
     console.error('Email delivery error:', error.message);
     res.status(500).json({ success: false, error: 'Email delivery failed. Please verify Resend or SMTP configuration.' });
   }
+});
+
+// Global 404 handler to ensure unknown routes return JSON, not HTML
+// This prevents "Unexpected token <" errors on the frontend
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    error: `API Route ${req.method} ${req.originalUrl} not found. Verify your backend URL and HTTP method.`
+  });
 });
 
 // Export app for serverless deployments
