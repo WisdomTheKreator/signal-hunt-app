@@ -32,7 +32,7 @@ function FirstTimeDemo() {
         }
 
         // Fallback: try to get from backend API
-        const response = await fetch("/api/demo-video-url");
+        const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/demo-video-url`);
         if (response.ok) {
           const data = await response.json();
           setVideoUrl(data.url);
