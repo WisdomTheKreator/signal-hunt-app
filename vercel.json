@@ -1,33 +1,14 @@
 {
   "version": 2,
+  "outputDirectory": "frontend/dist",
   "rewrites": [
     {
       "source": "/api/(.*)",
       "destination": "/api/index.js"
     },
     {
-      "source": "/assets/(.*)",
-      "destination": "/frontend/dist/assets/$1"
-    },
-    {
-      "source": "/favicon.svg",
-      "destination": "/frontend/dist/favicon.svg"
-    },
-    {
-      "source": "/icons.svg",
-      "destination": "/frontend/dist/icons.svg"
-    },
-    {
-      "source": "/manifest.json",
-      "destination": "/frontend/dist/manifest.json"
-    },
-    {
-      "source": "/service-worker.js",
-      "destination": "/frontend/dist/service-worker.js"
-    },
-    {
       "source": "/((?!api/).*)",
-      "destination": "/frontend/dist/index.html"
+      "destination": "/index.html"
     }
   ]
 }
