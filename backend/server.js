@@ -189,7 +189,7 @@ function extractJSON(text) {
 async function callGemini(model, prompt, apiKey) {
   const apiEndpoint = getGeminiEndpoint(model, apiKey);
   const maxRetries = 4;
-  let delay = 5000; // start with 5 seconds
+  let delay = 4000; // start with 4 seconds
 
   for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
     try {
@@ -215,7 +215,7 @@ async function callGemini(model, prompt, apiKey) {
       if (isRateLimit && attempt <= maxRetries) {
         console.warn(`Gemini rate limit hit (attempt ${attempt}/${maxRetries}). Retrying in ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
-        delay = Math.min(delay * 2, 30000); // double the wait time, capped at 30 seconds
+        delay = Math.min(delay * 2, 24000); // double the wait time, capped at 24 seconds (total wait ~52s)
       } else {
         throw error;
       }
