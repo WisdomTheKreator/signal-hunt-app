@@ -63,8 +63,15 @@
      *  void respondWith(Promise<Response> r)
      */
     self.addEventListener('fetch', event => {
+    const url = new URL(event.request.url);
+
+    // Bypass Service Worker for API requests and non-GET requests (e.g. POST to /api/hunt)
+    if (url.pathname.startsWith('/api') || event.request.method !== 'GET') {
+        return;
+    }
+
     // Skip some of cross-origin requests, like those for Google Analytics.
-    if (HOSTNAME_WHITELIST.indexOf(new URL(event.request.url).hostname) > -1) {
+    if (HOSTNAME_WHITELIST.indexOf(url.hostname) > -1) {
         // Stale-while-revalidate
         // similar to HTTP's stale-while-revalidate: https://www.mnot.net/blog/2007/12/12/stale
         // Upgrade from Jake's to Surma's: https://gist.github.com/surma/eb441223daaedf880801ad80006389f1

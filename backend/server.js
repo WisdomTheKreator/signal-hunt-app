@@ -6,10 +6,17 @@ const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 const GEMINI_MODEL_PRIMARY =
-  process.env.GEMINI_MODEL_PRIMARY || 'gemini-2.5-flash';
+  (process.env.GEMINI_MODEL_PRIMARY || 'gemini-2.0-flash').trim().replace(/^models\//, '');
 const GEMINI_MODEL_FALLBACK =
-  process.env.GEMINI_MODEL_FALLBACK || 'gemini-3.1-flash-lite';
+  (process.env.GEMINI_MODEL_FALLBACK || 'gemini-2.0-flash').trim().replace(/^models\//, '');
 const FEEDBACK_EMAIL = process.env.FEEDBACK_EMAIL || '';
+
+const CRITICAL_ENVS = ['GEMINI_API_KEY'];
+CRITICAL_ENVS.forEach(env => {
+  if (!process.env[env]) {
+    console.warn(`[WARNING] Missing critical environment variable: ${env}`);
+  }
+});
 
 // Create Express App
 const app = express();
@@ -51,7 +58,7 @@ async function scrapeUrlContent(targetUrl) {
     });
     if (response.data && response.data.length > 100) {
       console.log('Jina Reader scraping successful.');
-      return response.data.slice(0, 4000); // Limit content sent to AI
+      return response.data.slice(0, 15000); // Limit content sent to AI
     }
   } catch (error) {
     console.warn('Jina Reader failed or timed out. Trying fallbacks...', error.message);
@@ -117,7 +124,7 @@ async function scrapeUrlContent(targetUrl) {
     $('h1').slice(0, 5).each((i, el) => h1s.push($(el).text().trim()));
     $('h2').slice(0, 10).each((i, el) => h2s.push($(el).text().trim()));
     
-    const bodyText = $('body').text().replace(/\s+/g, ' ').trim().slice(0, 2000);
+    const bodyText = $('body').text().replace(/\s+/g, ' ').trim().slice(0, 15000);
 
     console.log('Direct HTML scrape completed.');
     return `Page Title: ${pageTitle}\nDescription: ${metaDescription}\nHeadings 1: ${h1s.join(', ')}\nHeadings 2: ${h2s.join(', ')}\nBody Snippet: ${bodyText}`;
@@ -148,6 +155,37 @@ function isGeminiQuotaError(error) {
   return /quota|rate limit|limit exceeded|resource_exhausted|too many requests|429|exhausted/.test(message);
 }
 
+function extractJSON(text) {
+  // 1. Try to extract between ```json and ```
+  const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (jsonMatch) {
+    try {
+      return JSON.parse(jsonMatch[1].trim());
+    } catch (e) {
+      // fallback to other methods
+    }
+  }
+  
+  // 2. Try to find the first {...}
+  try {
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start !== -1 && end !== -1 && end > start) {
+      return JSON.parse(text.slice(start, end + 1));
+    }
+  } catch (e) {
+    // fallback
+  }
+
+  // 3. Try to parse the whole string
+  try {
+    return JSON.parse(text.trim());
+  } catch (e) {
+    console.error("Gemini returned unparseable response:", text);
+    throw new Error("Gemini returned unparseable response");
+  }
+}
+
 async function callGemini(model, prompt, apiKey) {
   const apiEndpoint = getGeminiEndpoint(model, apiKey);
   const response = await axios.post(apiEndpoint, {
@@ -160,12 +198,12 @@ async function callGemini(model, prompt, apiKey) {
     headers: { 'Content-Type': 'application/json' }
   });
 
-  const candidateText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  let candidateText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!candidateText) {
     throw new Error('Invalid or empty response from Gemini API.');
   }
 
-  return JSON.parse(candidateText.trim());
+  return extractJSON(candidateText);
 }
 
 /**
@@ -173,7 +211,7 @@ async function callGemini(model, prompt, apiKey) {
  */
 async function analyzeWithGemini(url, content) {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey === 'YOUR_GEMINI_API_KEY_HERE') {
+  if (!apiKey) {
     throw new Error('GEMINI_API_KEY is not configured. Please add your key to the environment.');
   }
 
@@ -205,7 +243,7 @@ Your task: Provide a comprehensive and professional qualification analysis of th
   }
 
   prompt += `
-You MUST respond with a single, valid JSON object ONLY. No markdown wrapper (do NOT start with \`\`\`json), no trailing text.
+You MUST respond with a single, valid JSON object ONLY. Do NOT include any preamble, explanations, or conversational text. No markdown wrapper (do NOT start with \`\`\`json), no trailing text.
 
 Return exactly this JSON format:
 {
@@ -247,8 +285,9 @@ Outreach Readiness Score:
         throw new Error('AI analysis failed on fallback model. Please check your Gemini configuration.');
       }
     }
-    console.error('Error during Gemini analysis:', error.message);
-    throw new Error('AI Analysis failed. Please try again in a few minutes.');
+    const actualError = error?.response?.data?.error?.message || error.message;
+    console.error('Error during Gemini analysis:', actualError);
+    throw new Error(`AI Analysis failed: ${actualError}`);
   }
 }
 
@@ -281,7 +320,7 @@ app.post(['/api/hunt', '/hunt'], async (req, res) => {
       success: true,
       hunt_id: Date.now(), // Generate a unique identifier on the fly
       url: normalized,
-      model_used: analysis.model_used || 'gemini-2.5-flash',
+      model_used: analysis.model_used || GEMINI_MODEL_PRIMARY,
       fallback_from: analysis.fallback_from || null,
       brand_health: {
         score: analysis.brand_health_score || 50,
@@ -308,8 +347,8 @@ async function sendNotificationEmail(toEmail, subject, htmlContent) {
   const resendApiKey = process.env.RESEND_API_KEY;
   const fromEmail = process.env.SENDER_EMAIL || smtpUser || 'no-reply@signalhunt.app';
 
-  const hasResend = resendApiKey && resendApiKey !== 'your_resend_api_key_here';
-  const hasSmtp = smtpUser && smtpUser !== 'your_email@gmail.com' && smtpPass && smtpPass !== 'your_app_password_here' && smtpHost;
+  const hasResend = !!resendApiKey;
+  const hasSmtp = !!(smtpUser && smtpPass && smtpHost);
 
   if (!hasResend && !hasSmtp) {
     console.log(`[EMAIL SIMULATED] Notification to ${toEmail}:`, { subject, htmlContent });
@@ -461,6 +500,15 @@ app.post(['/api/save-prospect', '/save-prospect'], async (req, res) => {
     console.error('Email delivery error:', error.message);
     res.status(500).json({ success: false, error: 'Email delivery failed. Please verify Resend or SMTP configuration.' });
   }
+});
+
+// Global 404 handler to ensure unknown routes return JSON, not HTML
+// This prevents "Unexpected token <" errors on the frontend
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    error: `API Route ${req.method} ${req.originalUrl} not found. Verify your backend URL and HTTP method.`
+  });
 });
 
 // Export app for serverless deployments

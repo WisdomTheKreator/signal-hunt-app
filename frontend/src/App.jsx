@@ -34,12 +34,18 @@ function App() {
 
   // Executes URL qualification sequence using relative Vercel-compatible paths
   const handleHunt = async (targetUrl) => {
+    if (!targetUrl || !targetUrl.trim()) {
+      setError("Please enter a valid URL or handle.");
+      return;
+    }
+    if (isLoading) return;
+
     setIsLoading(true);
     setError("");
     setResult(null);
 
     try {
-      const response = await fetch("/api/hunt", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/hunt`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -47,20 +53,25 @@ function App() {
         body: JSON.stringify({ url: targetUrl }),
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        setError("Analysis failed: Invalid response from server (possible backend deployment issue).");
+        return;
+      }
 
-      if (response.ok && data.success) {
+      if (response.ok && data?.success) {
         setResult(data);
       } else {
         setError(
-          data.error ||
-            "Scraping or AI analysis failed. Please verify API key.",
+          data?.error ||
+            "Analysis failed: The server encountered an error processing this request.",
         );
       }
     } catch (err) {
-      console.error("Fetch error during hunt:", err);
       setError(
-        "Could not connect to the API server. Make sure the Node backend is running.",
+        "Backend unreachable: Could not connect to the API server.",
       );
     } finally {
       setIsLoading(false);
