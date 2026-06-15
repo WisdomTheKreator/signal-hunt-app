@@ -253,7 +253,7 @@ Outreach Readiness Score:
 }
 
 // ROUTE: Server health check
-app.get('/api/health', (req, res) => {
+app.get(['/api/health', '/health'], (req, res) => {
   res.json({
     status: 'Server running',
     timestamp: new Date().toISOString()
@@ -261,7 +261,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // ROUTE: Primary Hunt Endpoint (Database Free)
-app.post('/api/hunt', async (req, res) => {
+app.post(['/api/hunt', '/hunt'], async (req, res) => {
   const { url } = req.body;
   if (!url) {
     return res.status(400).json({ success: false, error: 'URL is required' });
@@ -365,7 +365,7 @@ async function sendNotificationEmail(toEmail, subject, htmlContent) {
 }
 
 // ROUTE: Feedback submission route (sends or simulates feedback email)
-app.post('/api/feedback', async (req, res) => {
+app.post(['/api/feedback', '/feedback'], async (req, res) => {
   const { email, message } = req.body;
 
   if (!message || !message.trim()) {
@@ -410,7 +410,7 @@ app.post('/api/feedback', async (req, res) => {
 });
 
 // ROUTE: Save Prospect Email Route (Database Free - Sends Email Copy)
-app.post('/api/save-prospect', async (req, res) => {
+app.post(['/api/save-prospect', '/save-prospect'], async (req, res) => {
   const { email, prospect } = req.body;
   
   if (!email) {
