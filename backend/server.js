@@ -188,22 +188,39 @@ function extractJSON(text) {
 
 async function callGemini(model, prompt, apiKey) {
   const apiEndpoint = getGeminiEndpoint(model, apiKey);
-  const response = await axios.post(apiEndpoint, {
-    contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: {
-      responseMimeType: 'application/json',
-      temperature: 0.7
+  const maxRetries = 4;
+  let delay = 5000; // start with 5 seconds
+
+  for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
+    try {
+      const response = await axios.post(apiEndpoint, {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          temperature: 0.7
+        }
+      }, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      const candidateText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!candidateText) {
+        throw new Error('Invalid or empty response from Gemini API.');
+      }
+
+      return extractJSON(candidateText);
+    } catch (error) {
+      const isRateLimit = error?.response?.status === 429 || isGeminiQuotaError(error);
+      
+      if (isRateLimit && attempt <= maxRetries) {
+        console.warn(`Gemini rate limit hit (attempt ${attempt}/${maxRetries}). Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay = Math.min(delay * 2, 30000); // double the wait time, capped at 30 seconds
+      } else {
+        throw error;
+      }
     }
-  }, {
-    headers: { 'Content-Type': 'application/json' }
-  });
-
-  let candidateText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!candidateText) {
-    throw new Error('Invalid or empty response from Gemini API.');
   }
-
-  return extractJSON(candidateText);
 }
 
 /**

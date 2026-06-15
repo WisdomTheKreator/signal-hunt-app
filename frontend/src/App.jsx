@@ -45,19 +45,24 @@ function App() {
     setResult(null);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/hunt`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL || ""}/api/hunt`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ url: targetUrl }),
         },
-        body: JSON.stringify({ url: targetUrl }),
-      });
+      );
 
       let data;
       try {
         data = await response.json();
       } catch (parseError) {
-        setError("Analysis failed: Invalid response from server (possible backend deployment issue).");
+        setError(
+          "Analysis failed: Invalid response from server (possible backend deployment issue).",
+        );
         return;
       }
 
@@ -70,9 +75,7 @@ function App() {
         );
       }
     } catch (err) {
-      setError(
-        "Backend unreachable: Could not connect to the API server.",
-      );
+      setError("Backend unreachable: Could not connect to the API server.");
     } finally {
       setIsLoading(false);
     }
@@ -188,8 +191,8 @@ function App() {
 
       <footer className="footer">
         <p>
-          &copy; {new Date().getFullYear()} Signal Hunt. Built for by The
-          Kreator for designers' cold outreach.
+          &copy; {new Date().getFullYear()} Signal Hunt. Built by The Kreator
+          for Designers' cold outreach.
         </p>
       </footer>
     </div>
