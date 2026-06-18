@@ -142,7 +142,7 @@ function App() {
           <h2>Beta Launch Limits</h2>
           <p>
             This MVP is in its beta phase. You can currently make up to{" "}
-            <strong>5 hunts per minute</strong> and{" "}
+            <strong>10 hunts per minute</strong> and{" "}
             <strong>500 hunts per day</strong>. If you hit a limit, please wait
             a bit before trying again. Thank You!
           </p>
